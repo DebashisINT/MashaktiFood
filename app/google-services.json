@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "564156242011",
+    "project_id": "mashakti-food-fsm",
+    "storage_bucket": "mashakti-food-fsm.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564156242011:android:42dde31fe1df995334477e",
+        "android_client_info": {
+          "package_name": "com.mashaktifoodfsm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "564156242011-uurmunu864p7grglc8kv6u8f9rtc9pgm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUi6wpXdr4C3MnRcoiCSQRf1E-bSyWMvc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "564156242011-uurmunu864p7grglc8kv6u8f9rtc9pgm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
