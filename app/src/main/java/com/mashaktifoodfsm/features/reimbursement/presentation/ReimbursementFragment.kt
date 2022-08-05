@@ -512,6 +512,12 @@ class ReimbursementFragment : BaseFragment(), DateAdapter.onPetSelectedListener,
 
     @SuppressLint("SetTextI18n")
     private fun setDateData(reimbursement_past_days: String?) {
+
+        val calendarToday = Calendar.getInstance(Locale.ENGLISH)
+        calendarToday.add(Calendar.DATE, 0)
+        val currentToday = calendarToday.time
+        dateList.add(currentToday)
+
         val calendar = Calendar.getInstance(Locale.ENGLISH)
         calendar.add(Calendar.DATE, -1)
         val todayDate = calendar.time
