@@ -523,7 +523,8 @@ class ReimbursementFragment : BaseFragment(), DateAdapter.onPetSelectedListener,
         val todayDate = calendar.time
         dateList.add(todayDate)
 
-        selectedDate = todayDate
+        //selectedDate = todayDate
+        selectedDate = currentToday
         val dateFormat = SimpleDateFormat("dd MMM")
         val formattedDate = dateFormat.format(selectedDate)
         date = getFormattedDateForApi(selectedDate!!)
