@@ -654,7 +654,7 @@ private fun callUpdateGpsStatusApi(list: List<GpsStatusEntity>) {
                         }
 
                         i++
-                        if (i < list.size) {
+                        if (i < list.size  && false) {
                             callUpdateGpsStatusApi(list)
                         } else {
                             i = 0
