@@ -1,6 +1,10 @@
 package com.mashaktifoodfsm.features.localshops
 
+import android.app.Dialog
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.os.Handler
 import androidx.recyclerview.widget.RecyclerView
 import android.text.TextUtils
 import android.view.LayoutInflater
@@ -18,9 +22,12 @@ import com.mashaktifoodfsm.app.AppDatabase
 import com.mashaktifoodfsm.app.Pref
 import com.mashaktifoodfsm.app.domain.AddShopDBModelEntity
 import com.mashaktifoodfsm.app.domain.OrderDetailsListEntity
+import com.mashaktifoodfsm.app.types.FragType
 import com.mashaktifoodfsm.app.utils.AppUtils
 import com.mashaktifoodfsm.app.utils.Toaster
+import com.mashaktifoodfsm.features.dashboard.presentation.DashboardActivity
 import com.mashaktifoodfsm.features.location.LocationWizard
+import com.mashaktifoodfsm.widgets.AppCustomTextView
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.inflate_nearby_shops.view.*
 import kotlinx.android.synthetic.main.inflate_nearby_shops.view.add_order_ll
@@ -45,10 +52,15 @@ import kotlinx.android.synthetic.main.inflate_nearby_shops.view.total_visited_va
 import kotlinx.android.synthetic.main.inflate_nearby_shops.view.tv_shop_code
 import kotlinx.android.synthetic.main.inflate_nearby_shops.view.tv_shop_contact_no
 import kotlinx.android.synthetic.main.inflate_registered_shops.view.*
+import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.uiThread
 
 /**
  * Created by riddhi on 2/1/18.
  */
+// 1.0 LocalShopsListAdapter  AppV 4.0.6  Suman   31/01/2023 Retailer/Entity show from room db mantis_id 25636
+//Begin 2.0 Pref v 4.1.6 Tufan 07/09/2023 mantis 26785 Multi visit Interval in Minutes Against the Same Shop
+
 
 class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, val listener: LocalShopListClickListener,private val getSize: (Int) -> Unit) :
         RecyclerView.Adapter<LocalShopsListAdapter.MyViewHolder>(), Filterable {
@@ -167,6 +179,9 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
             itemView.last_visited_date_TV.text = " " + list[adapterPosition].lastVisitedDate
 
             if (list[adapterPosition].visited) {
+
+                var obj = list[adapterPosition]
+
                 itemView.visit_icon.visibility = View.VISIBLE
                 if(Pref.isMultipleVisitEnable){
                     itemView.visit_TV.text = "Revisit Again"
@@ -177,6 +192,21 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
                     itemView.visit_TV.setTextColor(ContextCompat.getColor(context, R.color.maroon))
                     itemView.visit_icon.setColorFilter(ContextCompat.getColor(context,R.color.maroon),android.graphics.PorterDuff.Mode.SRC_IN)
                 }
+
+                if(Pref.IsmanualInOutTimeRequired){
+                    var statusL = AppDatabase.getDBInstance()!!.shopActivityDao().getShopForDay(obj.shop_id, AppUtils.getCurrentDateForShopActi())
+                    if(statusL.get(0).isDurationCalculated == false){
+                        itemView.visit_TV.text = "Out Location"
+                        itemView.visit_TV.setTextColor(ContextCompat.getColor(context, R.color.red))
+                        itemView.visit_icon.setColorFilter(ContextCompat.getColor(context,R.color.red),android.graphics.PorterDuff.Mode.SRC_IN)
+                    }
+                    else{
+                        itemView.visit_TV.text = "Revisited Today"
+                        itemView.visit_TV.setTextColor(ContextCompat.getColor(context, R.color.maroon))
+                        itemView.visit_icon.setColorFilter(ContextCompat.getColor(context,R.color.maroon),android.graphics.PorterDuff.Mode.SRC_IN)
+                    }
+                }
+
             } else {
                 itemView.visit_icon.visibility = View.GONE
 
@@ -187,7 +217,12 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
 
                 itemView.visit_TV.text = "Revisit Now"
                 itemView.visit_TV.setTextColor(ContextCompat.getColor(context, R.color.color_custom_green))
+
+                if(Pref.IsmanualInOutTimeRequired){
+                    itemView.visit_TV.text = "In Location"
+                }
             }
+
 
             itemView.shop_list_LL.setOnClickListener(View.OnClickListener {
                 //                listener.OnNearByShopsListClick(adapterPosition)
@@ -195,26 +230,101 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
 
             itemView.visit_rl.setOnClickListener(View.OnClickListener {
                 if (Pref.isMultipleVisitEnable) {
-                    val list_ = AppDatabase.getDBInstance()!!.shopActivityDao().getShopForDay(list[adapterPosition].shop_id, AppUtils.getCurrentDateForShopActi())
-                    /*if (list_ == null || list_.isEmpty())
-                        listener.visitShop(list[adapterPosition])
-                    else {
-                        var isDurationCalculated = false
-                        for (i in list_.indices) {
-                            isDurationCalculated = list_[i].isDurationCalculated
-                            if (!list_[i].isDurationCalculated)
-                                break
 
-                        }
+             //Begin 2.0 Pref v 4.1.6 Tufan 07/09/2023 mantis 26785 Work
+                    val multipleVisitShopList = AppDatabase.getDBInstance()!!.shopActivityDao().getMultipleVisitShopByShopId(list[
+                            adapterPosition].shop_id, AppUtils.getCurrentDateForShopActi())
+                    if(multipleVisitShopList.size >0 ){
+                        var duration = AppUtils.geTimeDuration(multipleVisitShopList[0].visited_date!!,AppUtils.getCurrentISODateTime())
+                        if(duration.toInt() > Pref.MultiVisitIntervalInMinutes.toInt()){
+                            val list_ = AppDatabase.getDBInstance()!!.shopActivityDao().getShopForDay(list[adapterPosition].shop_id, AppUtils.getCurrentDateForShopActi())
+                            /*if (list_ == null || list_.isEmpty())
+                                listener.visitShop(list[adapterPosition])
+                            else {
+                                var isDurationCalculated = false
+                                for (i in list_.indices) {
+                                    isDurationCalculated = list_[i].isDurationCalculated
+                                    if (!list_[i].isDurationCalculated)
+                                        break
 
-                        if (isDurationCalculated)
+                                }
+
+                                if (isDurationCalculated)
+                                    listener.visitShop(list[adapterPosition])
+                            }*/
                             listener.visitShop(list[adapterPosition])
-                    }*/
-                    listener.visitShop(list[adapterPosition])
+                        }else{
+                            var durationAfter =  Pref.MultiVisitIntervalInMinutes.toInt() - duration.toInt()
+                            if(Pref.MultiVisitIntervalInMinutes.toInt() == duration.toInt()){
+                                durationAfter = 1
+                            }
+                            val simpleDialog = Dialog(context)
+                            simpleDialog.setCancelable(false)
+                            simpleDialog.getWindow()!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                            simpleDialog.setContentView(R.layout.dialog_ok)
+                            val dialogHeader = simpleDialog.findViewById(R.id.dialog_yes_header_TV) as AppCustomTextView
+                            dialogHeader.text = "Please try after ${durationAfter} minutes"
+                            val dialogYes = simpleDialog.findViewById(R.id.tv_dialog_yes) as AppCustomTextView
+                            dialogYes.setOnClickListener({ view ->
+                                simpleDialog.cancel()
+                            })
+                            simpleDialog.show()
+                        }
+                      }else{
+                        val list_ = AppDatabase.getDBInstance()!!.shopActivityDao().getShopForDay(list[adapterPosition].shop_id, AppUtils.getCurrentDateForShopActi())
+                        /*if (list_ == null || list_.isEmpty())
+                            listener.visitShop(list[adapterPosition])
+                        else {
+                            var isDurationCalculated = false
+                            for (i in list_.indices) {
+                                isDurationCalculated = list_[i].isDurationCalculated
+                                if (!list_[i].isDurationCalculated)
+                                    break
+
+                            }
+
+                            if (isDurationCalculated)
+                                listener.visitShop(list[adapterPosition])
+                        }*/
+                        listener.visitShop(list[adapterPosition])
+                      }
+             //End 2.0 Pref v 4.1.6 Tufan 07/09/2023 mantis 26785 Multi visit Interval in Minutes Against the Same Shop
+
                 }
                 else {
-                    if (!list[adapterPosition].visited)
-                        listener.visitShop(list[adapterPosition])
+                    var objL =  AppDatabase.getDBInstance()!!.shopActivityDao().getDurationCalculatedVisitedShopForADay(AppUtils.getCurrentDateForShopActi(), false)
+                    if(objL.size>0 && Pref.IsmanualInOutTimeRequired){
+                        if(objL.get(0).shopid.equals(list.get(adapterPosition).shop_id)){
+                            var statusL = AppDatabase.getDBInstance()!!.shopActivityDao().getShopForDay(list[adapterPosition].shop_id, AppUtils.getCurrentDateForShopActi())
+                            if(statusL.get(0).isDurationCalculated == false){
+                                listener.outLocation(list[adapterPosition].shop_id)
+                            }
+                        }else{
+                            val simpleDialog = Dialog(context)
+                            simpleDialog.setCancelable(false)
+                            simpleDialog.getWindow()!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                            simpleDialog.setContentView(R.layout.dialog_ok)
+                            val dialogHeader = simpleDialog.findViewById(R.id.dialog_yes_header_TV) as AppCustomTextView
+                            dialogHeader.text = "Shop out location is pending."
+                            val dialogYes = simpleDialog.findViewById(R.id.tv_dialog_yes) as AppCustomTextView
+                            dialogYes.setOnClickListener({ view ->
+                                simpleDialog.cancel()
+                                (context as DashboardActivity).loadFragment(FragType.PendingOutLocationFrag, false, "")
+                            })
+                            simpleDialog.show()
+                        }
+
+                    }else{
+                        if (!list[adapterPosition].visited )
+                            listener.visitShop(list[adapterPosition])
+                        else if(Pref.IsmanualInOutTimeRequired){
+                            var statusL = AppDatabase.getDBInstance()!!.shopActivityDao().getShopForDay(list[adapterPosition].shop_id, AppUtils.getCurrentDateForShopActi())
+                            if(statusL.get(0).isDurationCalculated == false){
+                                listener.outLocation(list[adapterPosition].shop_id)
+                            }
+                        }
+                    }
+
                 }
             })
 
@@ -366,9 +476,16 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
                 itemView.order_view.visibility = View.GONE
             }
 
-            val distance = LocationWizard.getDistance(list[adapterPosition].shopLat, list[adapterPosition].shopLong,
-                    Pref.current_latitude.toDouble(), Pref.current_longitude.toDouble())
-            itemView.approx_distance.text = (distance * 1000).toString() + " mtr"
+            if(Pref.ShowApproxDistanceInNearbyShopList){
+                itemView.ll_approx_dist_show_root.visibility = View.VISIBLE
+                val distance = LocationWizard.getDistance(list[adapterPosition].shopLat, list[adapterPosition].shopLong,
+                Pref.current_latitude.toDouble(), Pref.current_longitude.toDouble())
+                itemView.approx_distance.text = (distance * 1000).toString() + " mtr"
+            }
+            else{
+               itemView.ll_approx_dist_show_root.visibility = View.GONE
+            }
+
 
             if (Pref.willShowPartyStatus)
                 itemView.rl_party.visibility = View.VISIBLE
@@ -394,6 +511,17 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
             else
                 itemView.tv_party_value.text = "N.A."
 
+            itemView.tv_retailer_entity_header.text = "Party Category: "
+            try{
+                if(list[adapterPosition].retailer_id == null || list[adapterPosition].retailer_id.equals("")){
+                    itemView.tv_retailer_entity_value.text = "N.A."
+                }else{
+                    itemView.tv_retailer_entity_value.text = AppDatabase.getDBInstance()?.retailerDao()?.getSingleItem(list[adapterPosition].retailer_id.toString())!!.name
+                }
+            }catch (ex:Exception){
+                itemView.tv_retailer_entity_value.text = "N.A."
+            }
+
 
             if(Pref.IsFeedbackHistoryActivated){
                 itemView.history_llll.visibility=View.VISIBLE
@@ -414,8 +542,65 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
                 itemView.direction_view.visibility = View.GONE
             }
 
+            /*if(Pref.IsSurveyRequiredforDealer && list[adapterPosition].type!!.equals("1")) {
+                itemView.shop_rv_survey_ll.visibility = View.VISIBLE
+                itemView.shop_rv_survey_view.visibility = View.VISIBLE
+            }
+            else if(Pref.IsSurveyRequiredforNewParty && list[adapterPosition].type!!.equals("3")){
+                itemView.shop_rv_survey_ll.visibility = View.VISIBLE
+                itemView.shop_rv_survey_view.visibility = View.VISIBLE
+            }
+            else{
+                itemView.shop_rv_survey_ll.visibility = View.GONE
+                itemView.shop_rv_survey_view.visibility = View.GONE
+            }
 
-        }
+            itemView.shop_rv_survey_ll.setOnClickListener{
+                listener.onSurveyClick(list[adapterPosition].shop_id)
+            }*/
+
+            if(Pref.IsAllowNearbyshopWithBeat == false){
+                if(Pref.IsBeatRouteAvailableinAttendance){
+                    if(list[adapterPosition].beat_id.equals(Pref.SelectedBeatIDFromAttend)){
+                        itemView.rl_revisit_nearby_shop.visibility=View.VISIBLE
+                        itemView.visit_rl.isEnabled=true
+                    }else{
+                        itemView.rl_revisit_nearby_shop.visibility=View.GONE
+                        itemView.visit_rl.isEnabled=false
+                    }
+                }
+            }
+
+
+            try{
+                if(Pref.IsGSTINPANEnableInShop) {
+                    if (list[adapterPosition].gstN_Number.isNotEmpty()) {
+                        itemView.myshop_gstin_TV.text = "GSTIN : " + list[adapterPosition].gstN_Number
+                        itemView.myshop_gstin_TV.visibility = View.VISIBLE
+                    } else {
+                        itemView.myshop_gstin_TV.text = "GSTIN : " + "N.A"
+                        itemView.myshop_gstin_TV.visibility = View.VISIBLE
+                    }
+                }else{
+                    itemView.myshop_gstin_TV.visibility = View.GONE
+                }
+                if(Pref.IsGSTINPANEnableInShop) {
+                    if (list[adapterPosition].shopOwner_PAN.isNotEmpty()) {
+                        itemView.myshop_pancard_TV.text = "PAN     : " + list[adapterPosition].shopOwner_PAN
+                        itemView.myshop_pancard_TV.visibility = View.VISIBLE
+                    } else {
+                        itemView.myshop_pancard_TV.text = "PAN     : " + "N.A"
+                        itemView.myshop_pancard_TV.visibility = View.VISIBLE
+                    }
+                }else{
+                    itemView.myshop_pancard_TV.visibility = View.GONE
+                }
+            }
+            catch (ex:Exception){
+                itemView.myshop_gstin_TV.text =  "GSTIN : "+"N.A"
+                itemView.myshop_pancard_TV.text = "PAN     : "+"N.A"
+            }
+            }
     }
 
     fun updateAdapter(mlist: ArrayList<AddShopDBModelEntity>) {
@@ -434,22 +619,29 @@ class LocalShopsListAdapter(context: Context, list: List<AddShopDBModelEntity>, 
 
             val results = FilterResults()
             filterList?.clear()
-            tempList?.indices!!
-                    .filter { tempList?.get(it)?.shopName?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
-                            tempList?.get(it)?.pinCode?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
-                            tempList?.get(it)?.ownerName?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
-                            tempList?.get(it)?.ownerContactNumber?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
-                            //AppDatabase.getDBInstance()!!.addShopEntryDao().getLandNumber(tempList?.get(it)?.landline_number!!).toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
-                            //tempList?.get(it)?.landline_number?.toLowerCase()?.contains(land)!! ||
-                            //AppDatabase.getDBInstance()!!.shopTypeDao().getShopNameById(tempList?.get(it)?.type!!).toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
-                            tempList?.get(it)?.address?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!
-                    }
-                    .forEach { filterList?.add(tempList?.get(it)!!) }
 
+            try{
+                if(tempList?.size!! < 500){
+                    tempList?.indices!!
+                        .filter { tempList?.get(it)?.shopName?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
+                                tempList?.get(it)?.pinCode?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
+                                tempList?.get(it)?.ownerName?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
+                                tempList?.get(it)?.ownerContactNumber?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
+                                //AppDatabase.getDBInstance()!!.addShopEntryDao().getLandNumber(tempList?.get(it)?.landline_number!!).toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
+                                //tempList?.get(it)?.landline_number?.toLowerCase()?.contains(land)!! ||
+                                //AppDatabase.getDBInstance()!!.shopTypeDao().getShopNameById(tempList?.get(it)?.type!!).toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!  ||
+                                tempList?.get(it)?.address?.toLowerCase()?.contains(p0?.toString()?.toLowerCase()!!)!!
+                        }
+                        .forEach { filterList?.add(tempList?.get(it)!!) }
+                }else{
+                    filterList = tempList!!.filter { it.shopName.contains(p0!!.toString(),ignoreCase = true) } as ArrayList<AddShopDBModelEntity>
+                }
+            }catch (ex:Exception){
+                ex.printStackTrace()
+            }
 
             results.values = filterList
             results.count = filterList?.size!!
-
             return results
         }
 

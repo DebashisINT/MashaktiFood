@@ -155,7 +155,7 @@ class NearByShopsMapFragment : BaseFragment(), View.OnClickListener, OnMapReadyC
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun onMapReady(googleMap: GoogleMap?) {
+    override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
         mGoogleMap!!.uiSettings.isZoomControlsEnabled = false
 //        mGoogleMap!!.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(22.154438, 78.755449), 4f))
@@ -176,10 +176,13 @@ class NearByShopsMapFragment : BaseFragment(), View.OnClickListener, OnMapReadyC
         list.clear()
         val allShopList = AppDatabase.getDBInstance()!!.addShopEntryDao().all
 
+
+
         val newList = java.util.ArrayList<AddShopDBModelEntity>()
 
         for (i in allShopList.indices) {
-            val userId = allShopList[i].shop_id.substring(0, allShopList[i].shop_id.indexOf("_"))
+//            val userId = allShopList[i].shop_id.substring(0, allShopList[i].shop_id.indexOf("_"))
+            val userId = allShopList[i].user_id
             if (userId == Pref.user_id)
                 newList.add(allShopList[i])
         }
@@ -211,7 +214,7 @@ class NearByShopsMapFragment : BaseFragment(), View.OnClickListener, OnMapReadyC
         markerOptions.title("My Location")
         markerOptions.snippet(locationName)
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))
-        currentMarker = mGoogleMap!!.addMarker(markerOptions)
+        currentMarker = mGoogleMap!!.addMarker(markerOptions!!)!!
         mCurrLocationMarker.add(currentMarker)
     }
 
@@ -256,7 +259,7 @@ class NearByShopsMapFragment : BaseFragment(), View.OnClickListener, OnMapReadyC
 
 //        mGoogleMap!!.addCircle(circleOptions)
         mShopCircles.add(mGoogleMap!!.addCircle(circleOptions))
-        currentMarker = mGoogleMap!!.addMarker(markerOptions)
+        currentMarker = mGoogleMap!!.addMarker(markerOptions)!!
         mCurrLocationMarker.add(currentMarker)
 
         mGoogleMap!!.setInfoWindowAdapter(object : InfoWindowAdapter {

@@ -18,7 +18,7 @@ import com.mashaktifoodfsm.features.dashboard.presentation.DashboardActivity
 import com.mashaktifoodfsm.features.document.api.DocumentRepoProvider
 import com.mashaktifoodfsm.features.document.model.DocumentTypeResponseModel
 import com.mashaktifoodfsm.widgets.AppCustomTextView
-import com.elvishew.xlog.XLog
+
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import org.jetbrains.anko.doAsync

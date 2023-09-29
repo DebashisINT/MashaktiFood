@@ -15,6 +15,8 @@ import com.mashaktifoodfsm.features.lead.model.LeadActivityEntity
 import com.mashaktifoodfsm.features.location.UserLocationDataDao
 import com.mashaktifoodfsm.features.location.UserLocationDataEntity
 import com.mashaktifoodfsm.features.login.*
+import com.mashaktifoodfsm.features.taskManagement.model.TaskManagementDao
+import com.mashaktifoodfsm.features.taskManagement.model.TaskManagmentEntity
 
 
 /*
@@ -32,6 +34,12 @@ import com.mashaktifoodfsm.features.login.*
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+//Revision History
+// 1.0   AppV 4.0.6  Saheli    05/012/2023 shop_extra_contact migration
+// 2.0   AppV 4.0.6  Saheli    06/01/2023 shop_activity and tbl_shop_deefback migration
+// 3.0   AppV 4.0.6  Saheli    11/01/2023  shopStatusUpdate migration
+// 4.0   AppV 4.0.6  Saheli    20/01/2023  order_product_list order_mrp & order_discount  migration mantis 25601
+// 5.0   AppV 4.0.6  Saheli    01/02/2023  product_list   migration changes
 
 @Database(entities = arrayOf(AddShopDBModelEntity::class, UserLocationDataEntity::class, UserLoginDataEntity::class, ShopActivityEntity::class,
         StateListEntity::class, CityListEntity::class, MarketingDetailEntity::class, MarketingDetailImageEntity::class, MarketingCategoryMasterEntity::class,
@@ -50,16 +58,16 @@ import com.mashaktifoodfsm.features.login.*
         PriorityListEntity::class, ActivityEntity::class, AddDoctorProductListEntity::class, AddDoctorEntity::class,
         AddChemistProductListEntity::class, AddChemistEntity::class, DocumentypeEntity::class, DocumentListEntity::class, PaymentModeEntity::class,
         EntityTypeEntity::class, PartyStatusEntity::class, RetailerEntity::class, DealerEntity::class, BeatEntity::class, AssignToShopEntity::class,
-        VisitRemarksEntity::class,ShopVisitCompetetorModelEntity::class,
-        OrderStatusRemarksModelEntity::class,CurrentStockEntryModelEntity::class,CurrentStockEntryProductModelEntity::class,
-           CcompetetorStockEntryModelEntity::class,CompetetorStockEntryProductModelEntity::class,
+        VisitRemarksEntity::class, ShopVisitCompetetorModelEntity::class,
+        OrderStatusRemarksModelEntity::class, CurrentStockEntryModelEntity::class, CurrentStockEntryProductModelEntity::class,
+        CcompetetorStockEntryModelEntity::class, CompetetorStockEntryProductModelEntity::class,
         ShopTypeStockViewStatus::class,
-        NewOrderGenderEntity::class,NewOrderProductEntity::class,NewOrderColorEntity::class,NewOrderSizeEntity::class,NewOrderScrOrderEntity::class,ProspectEntity::class,
-        QuestionEntity::class,QuestionSubmitEntity::class,AddShopSecondaryImgEntity::class,ReturnDetailsEntity::class
-        ,ReturnProductListEntity::class,UserWiseLeaveListEntity::class,ShopFeedbackEntity::class,ShopFeedbackTempEntity::class,LeadActivityEntity::class,
-        ShopDtlsTeamEntity::class,CollDtlsTeamEntity::class,BillDtlsTeamEntity::class,OrderDtlsTeamEntity::class,
-            TeamAllShopDBModelEntity::class,DistWiseOrderTblEntity::class),
-        version = 1, exportSchema = false)
+        NewOrderGenderEntity::class, NewOrderProductEntity::class, NewOrderColorEntity::class, NewOrderSizeEntity::class, NewOrderScrOrderEntity::class, ProspectEntity::class,
+        QuestionEntity::class, QuestionSubmitEntity::class, AddShopSecondaryImgEntity::class, ReturnDetailsEntity::class, ReturnProductListEntity::class, UserWiseLeaveListEntity::class, ShopFeedbackEntity::class, ShopFeedbackTempEntity::class, LeadActivityEntity::class,
+        ShopDtlsTeamEntity::class, CollDtlsTeamEntity::class, BillDtlsTeamEntity::class, OrderDtlsTeamEntity::class,
+        TeamAllShopDBModelEntity::class, DistWiseOrderTblEntity::class, NewGpsStatusEntity::class,ShopExtraContactEntity::class,ProductOnlineRateTempEntity::class, TaskManagmentEntity::class,
+    VisitRevisitWhatsappStatus::class),
+        version = 2, exportSchema = false)
 @TypeConverters(DateConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun addShopEntryDao(): AddShopDao
@@ -103,6 +111,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun selectedRouteListDao(): SelectedRouteDao
     abstract fun selectedRouteShopListDao(): SelectedRouteShopListDao
     abstract fun updateOutstandingDao(): OutstandingListDao
+
     //abstract fun locationDao(): LocationDao
     abstract fun idleLocDao(): IdleLocDao
 
@@ -171,25 +180,34 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun prosDao(): ProspectDao
     abstract fun questionMasterDao(): QuestionDao
-    abstract fun questionSubmitDao():  QuestionSubmitDao
-    abstract fun addShopSecondaryImgDao():  AddShopSecondaryImgDao
+    abstract fun questionSubmitDao(): QuestionSubmitDao
+    abstract fun addShopSecondaryImgDao(): AddShopSecondaryImgDao
 
-    abstract fun returnDetailsDao():ReturnDetailsDao
-    abstract fun returnProductListDao():ReturnProductListDao
+    abstract fun returnDetailsDao(): ReturnDetailsDao
+    abstract fun returnProductListDao(): ReturnProductListDao
 
     abstract fun userWiseLeaveListDao(): UserWiseLeaveListDao
 
     abstract fun shopFeedbackDao(): ShopFeedbackDao
-    abstract fun shopFeedbackTempDao() : ShopFeedbackTepDao
-    abstract fun leadActivityDao() : LeadActivityDao
+    abstract fun shopFeedbackTempDao(): ShopFeedbackTepDao
+    abstract fun leadActivityDao(): LeadActivityDao
 
-    abstract fun shopDtlsTeamDao() : ShopDtlsTeamDao
-    abstract fun billDtlsTeamDao() : BillDtlsTeamDao
-    abstract fun orderDtlsTeamDao() : OrderDtlsTeamDao
-    abstract fun collDtlsTeamDao() : CollDtlsTeamDao
-    abstract fun teamAllShopDBModelDao() : TeamAllShopDBModelDao
+    abstract fun shopDtlsTeamDao(): ShopDtlsTeamDao
+    abstract fun billDtlsTeamDao(): BillDtlsTeamDao
+    abstract fun orderDtlsTeamDao(): OrderDtlsTeamDao
+    abstract fun collDtlsTeamDao(): CollDtlsTeamDao
+    abstract fun teamAllShopDBModelDao(): TeamAllShopDBModelDao
 
-    abstract fun distWiseOrderTblDao() : DistWiseOrderTblDao
+    abstract fun distWiseOrderTblDao(): DistWiseOrderTblDao
+
+    abstract fun newGpsStatusDao(): NewGpsStatusDao
+    abstract fun shopExtraContactDao(): ShopExtraContactDao
+
+    abstract fun productOnlineRateTempDao(): ProductOnlineRateTempDao
+
+
+    abstract fun taskManagementDao(): TaskManagementDao
+    abstract fun visitRevisitWhatsappStatusDao(): VisitRevisitWhatsappStatusDao
 
 
     companion object {
@@ -201,8 +219,7 @@ abstract class AppDatabase : RoomDatabase() {
                         // allow queries on the main thread.
                         // Don't do this on a real app! See PersistenceBasicSample for an example.
                         .allowMainThreadQueries()
-                        .addMigrations(
-                        )
+                        .addMigrations(     MIGRATION_1_2                 )
 //                        .fallbackToDestructiveMigration()
                         .build()
             }
@@ -217,6 +234,49 @@ abstract class AppDatabase : RoomDatabase() {
             INSTANCE = null
         }
 
+        val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+                database.execSQL("CREATE TABLE shop_visit_revisit_whatsapp_status (sl_no INTEGER NOT NULL PRIMARY KEY, shop_id TEXT NOT NULL, shop_name TEXT NOT NULL, contactNo TEXT NOT NULL, " +        "isNewShop INTEGER NOT NULL , " +        "date TEXT NOT NULL, time TEXT NOT NULL,isWhatsappSent INTEGER NOT NULL ,whatsappSentMsg TEXT NOT NULL,isUploaded INTEGER NOT NULL,transactionId TEXT NOT NULL  )")
+
+                database.execSQL("create TABLE product_online_rate_temp_table  (id INTEGER NOT NULL PRIMARY KEY , product_id  TEXT , rate TEXT, stock_amount TEXT , stock_unit TEXT , isStockShow INTEGER NOT NULL DEFAULT 0 , " +
+                        "isRateShow INTEGER NOT NULL DEFAULT 0,Qty_per_Unit REAL,Scheme_Qty REAL,Effective_Rate REAL) ")
+
+                database.execSQL("alter table shop_activity ADD COLUMN distFromProfileAddrKms TEXT")
+                database.execSQL("alter table shop_activity ADD COLUMN stationCode TEXT")
+
+                database.execSQL("CREATE TABLE task_activity (id INTEGER NOT NULL PRIMARY KEY, task_status_id TEXT, task_date TEXT, task_time TEXT, task_status TEXT, " +
+                        "task_details TEXT, other_remarks TEXT,task_next_date TEXT)")
+
+                database.execSQL("ALTER TABLE shop_detail ADD COLUMN isOwnshop INTEGER NOT NULL DEFAULT 1 ")
+                database.execSQL("ALTER TABLE shop_detail ADD COLUMN shopStatusUpdate TEXT DEFAULT '1' ")
+                database.execSQL("alter table shop_detail ADD COLUMN GSTN_Number TEXT")
+                database.execSQL("alter table shop_detail ADD COLUMN ShopOwner_PAN TEXT")
+
+                database.execSQL("alter table shop_activity ADD COLUMN isnewShop INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("alter table shop_activity ADD COLUMN multi_contact_name TEXT")
+                database.execSQL("alter table shop_activity ADD COLUMN multi_contact_number TEXT")
+
+                database.execSQL("CREATE INDEX ACTIVITYID ON shop_activity (shopActivityId,shopid,visited_date)")
+                database.execSQL("CREATE INDEX ACTIVITY_ID_DATE ON shop_activity (shopid,visited_date)")
+
+                database.execSQL("alter table product_list ADD COLUMN product_mrp_show TEXT")
+                database.execSQL("alter table product_list ADD COLUMN product_discount_show TEXT")
+
+                database.execSQL("alter table order_product_list ADD COLUMN order_mrp TEXT")
+                database.execSQL("alter table order_product_list ADD COLUMN order_discount TEXT")
+
+                database.execSQL("ALTER TABLE battery_net_status_list ADD COLUMN Available_Storage TEXT ")
+                database.execSQL("ALTER TABLE  battery_net_status_list ADD COLUMN Total_Storage TEXT")
+                database.execSQL("ALTER TABLE battery_net_status_list ADD COLUMN Power_Saver_Status TEXT NOT NULL DEFAULT 'Off' ")
+
+                database.execSQL("alter table tbl_shop_deefback ADD COLUMN multi_contact_name TEXT")
+                database.execSQL("alter table tbl_shop_deefback ADD COLUMN multi_contact_number TEXT")
+
+                database.execSQL("create TABLE shop_extra_contact (id INTEGER NOT NULL PRIMARY KEY , shop_id TEXT , contact_serial TEXT, contact_name TEXT , contact_number TEXT , contact_email TEXT , contact_doa TEXT ,contact_dob TEXT , isUploaded INTEGER NOT NULL DEFAULT 0) ")
+                database.execSQL("create TABLE new_gps_status  (id INTEGER NOT NULL PRIMARY KEY , date_time  TEXT , gps_service_status TEXT, network_status  TEXT , isUploaded INTEGER NOT NULL DEFAULT 0) ")
+            }
+        }
 
 
     }

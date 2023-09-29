@@ -5,6 +5,7 @@ import com.mashaktifoodfsm.app.NetworkConstant
 import com.mashaktifoodfsm.base.BaseResponse
 import com.mashaktifoodfsm.features.addshop.model.*
 import com.mashaktifoodfsm.features.addshop.model.assigntopplist.AssignToPPListResponseModel
+import com.mashaktifoodfsm.features.beatCustom.BeatTeamResponseModel
 import io.reactivex.Observable
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
@@ -47,6 +48,10 @@ interface TypeListApi {
     @FormUrlEncoded
     @POST("SubType/BeatList")
     fun getBeatList(@Field("session_token") session_token: String, @Field("user_id") user_id: String): Observable<BeatListResponseModel>
+
+    @FormUrlEncoded
+    @POST("AreaRouteBeatRelationInfo/BeatAreaRouteList")
+    fun getBeatAreaRouteApi(@Field("session_token") session_token: String, @Field("user_id") user_id: String): Observable<BetAreaRouteResponseModel>
 
     @FormUrlEncoded
     @POST("Bankdetails/Update")

@@ -34,7 +34,7 @@ import com.mashaktifoodfsm.features.shopdetail.presentation.model.addcollection.
 import com.mashaktifoodfsm.features.viewAllOrder.api.addorder.AddOrderRepoProvider
 import com.mashaktifoodfsm.features.viewAllOrder.model.AddOrderInputParamsModel
 import com.mashaktifoodfsm.features.viewAllOrder.model.AddOrderInputProductList
-import com.elvishew.xlog.XLog
+
 import com.pnikosis.materialishprogress.ProgressWheel
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers

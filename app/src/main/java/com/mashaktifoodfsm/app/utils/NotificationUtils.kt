@@ -7,16 +7,16 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.media.RingtoneManager
 import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import android.text.TextUtils
 import android.util.Log
 import android.widget.RemoteViews
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.mashaktifoodfsm.CustomStatic
-import com.elvishew.xlog.XLog
-import com.google.firebase.messaging.RemoteMessage
 import com.mashaktifoodfsm.R
 import com.mashaktifoodfsm.app.AppConstant
 import com.mashaktifoodfsm.app.AppDatabase
@@ -29,12 +29,17 @@ import com.mashaktifoodfsm.features.chat.model.ChatListDataModel
 import com.mashaktifoodfsm.features.chat.model.ChatUserDataModel
 import com.mashaktifoodfsm.features.dashboard.presentation.DashboardActivity
 import com.mashaktifoodfsm.features.login.UserLoginDataEntity
+
+import com.google.firebase.messaging.RemoteMessage
+import timber.log.Timber
 import java.util.*
 
 
 /**
  * Created by sandip on 10-11-2017.
  */
+// Revision History
+// 1.0 NotificationUtils Design  AppV 4.0.6 Saheli    30/01/2023 mantis 25630
 class NotificationUtils(headerText: String, bodyText: String, shopId: String, localShopId: String) {
 
     var headerText: String = headerText
@@ -60,11 +65,10 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         if (Pref.isOnLeave.equals("true", ignoreCase = true))
             return
         //19-08-21 revisit visit stop untill daystart
-        if(Pref.IsShowDayStart){
-            if(!Pref.DayStartMarked)
+        if (Pref.IsShowDayStart) {
+            if (!Pref.DayStartMarked)
                 return
         }
-
 
 
         val shop = AppDatabase.getDBInstance()!!.addShopEntryDao().getShopByIdN(shopId)
@@ -79,7 +83,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         yesIntent.putExtra("NAME", bodyText)
         yesIntent.putExtra("ID", shopID)
         yesIntent.putExtra("LOCAL_ID", localShopId)
-        val pendingIntentYes = PendingIntent.getBroadcast(mContext, shopID.hashCode(), yesIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntentYes = PendingIntent.getBroadcast(mContext, shopID.hashCode(), yesIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntentYes = PendingIntent.getBroadcast(mContext, shopID.hashCode(), yesIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val noIntent = Intent(mContext, ActionReceiver::class.java)
         noIntent.action = "actionNo"
@@ -87,7 +93,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         noIntent.putExtra("NAME", bodyText)
         noIntent.putExtra("ID", shopID)
         noIntent.putExtra("LOCAL_ID", localShopId)
-        val pendingIntentno = PendingIntent.getBroadcast(mContext, shopID.hashCode(), noIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntentno = PendingIntent.getBroadcast(mContext, shopID.hashCode(), noIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntentno = PendingIntent.getBroadcast(mContext, shopID.hashCode(), noIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val shopIntent = Intent(mContext, DashboardActivity::class.java)
         shopIntent.putExtra("NAME", bodyText)
@@ -95,7 +103,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(mContext, shopID.hashCode(), shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(mContext, shopID.hashCode(), shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(mContext, shopID.hashCode(), shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val notificationmanager = mContext.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
@@ -114,13 +124,13 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
 
 
         val builder = NotificationCompat.Builder(mContext)
-            .setSmallIcon(R.drawable.ic_notifications_icon)
-            .setStyle(NotificationCompat.InboxStyle())
+                .setSmallIcon(R.drawable.ic_notifications_icon)
+                .setStyle(NotificationCompat.InboxStyle())
 //                .setPriority(Notification.PRIORITY_MAX)
 //                .addAction(android.R.drawable.ic_delete, "Yes", pendingIntentYes)
 //                .addAction(android.R.drawable.ic_delete, "No", pendingIntentno)
 //                .setContentIntent(pendingIntent)
-            .setAutoCancel(false)
+                .setAutoCancel(false)
         builder.setStyle(NotificationCompat.BigTextStyle().bigText(headerText + "\n" + bodyText + "\n\n\n"))  // Expand collapse notification
         builder.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
         //builder.setGroup("FTS Group")
@@ -140,14 +150,13 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
 
         var notificationBody = ""
 
-        var partyStatus: PartyStatusEntity?= null
-        var entity: EntityTypeEntity?= null
+        var partyStatus: PartyStatusEntity? = null
+        var entity: EntityTypeEntity? = null
 
         try {
             partyStatus = AppDatabase.getDBInstance()?.partyStatusDao()?.getSingleItem(shop?.party_status_id!!)
             entity = AppDatabase.getDBInstance()?.entityDao()?.getSingleItem(shop?.entity_id!!)
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
         }
 
@@ -161,21 +170,18 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
                     notificationBody = "You are at nearby location of $bodyText(Entity Type: ${entity?.name}), $contactNumber. Wish to Revisit now?"
                 else
                     notificationBody = "You are at nearby location of $bodyText, $contactNumber. Wish to Revisit now?"
-            }
-            else {
+            } else {
                 if (partyStatus != null)
                     notificationBody = "You are at nearby location of $bodyText(Party Status: ${partyStatus?.name}), $contactNumber. Wish to Revisit now?"
                 else
                     notificationBody = "You are at nearby location of $bodyText, $contactNumber. Wish to Revisit now?"
             }
-        }
-        else if (Pref.willShowPartyStatus) {
+        } else if (Pref.willShowPartyStatus) {
             if (partyStatus != null)
                 notificationBody = "You are at nearby location of $bodyText(Party Status: ${partyStatus?.name}), $contactNumber. Wish to Revisit now?"
             else
                 notificationBody = "You are at nearby location of $bodyText, $contactNumber. Wish to Revisit now?"
-        }
-        else if (Pref.willShowEntityTypeforShop && shop?.type == "1" && entity != null)
+        } else if (Pref.willShowEntityTypeforShop && shop?.type == "1" && entity != null)
             notificationBody = "You are at nearby location of $bodyText(Entity Type: ${entity?.name}), $contactNumber. Wish to Revisit now?"
         else
             notificationBody = "You are at nearby location of $bodyText, $contactNumber. Wish to Revisit now?"
@@ -210,7 +216,7 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
 
         val remoteView = RemoteViews(applicationContext.packageName, R.layout.customnotificationsmall)
 
-
+        //val remoteView = RemoteViews(applicationContext.packageName, R.layout.customnoti)
         /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !notificationmanager.isNotificationPolicyAccessGranted) {
             val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
             applicationContext.startActivity(intent)
@@ -241,7 +247,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -249,7 +257,7 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
 
             val channelName = AppUtils.notificationChannelName
 
-            XLog.e("========Notification Channel enabled (FirebaseMesagingService)=========")
+            Timber.e("========Notification Channel enabled (FirebaseMesagingService)=========")
 
             val importance = NotificationManager.IMPORTANCE_HIGH
             val notificationChannel = NotificationChannel(channelId, channelName, importance)
@@ -260,38 +268,38 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContentText(remoteMessage?.data?.get("body").toString()) //1.0 Notification Design  AppV 4.0.6 mantis 25630
+//                    .setContent(remoteView)  //1.0 Notification Design  AppV 4.0.6 mantis 25630 off
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
-        }
-        else {
+        } else {
             val notification = NotificationCompat.Builder(
-                applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    applicationContext)
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -358,36 +366,36 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                //.setContentIntent(pending)
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    //.setContentIntent(pending)
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                //.setContentIntent(pending)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    //.setContentIntent(pending)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -423,7 +431,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pending: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -440,36 +450,36 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(false)
-                .setChannelId(channelId)
-                .setContentIntent(pending)
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(false)
+                    .setChannelId(channelId)
+                    .setContentIntent(pending)
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setContentIntent(pending)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(false)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setContentIntent(pending)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(false)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -504,8 +514,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, alarmData?.id?.toInt()?.hashCode()!!, shopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pending: PendingIntent = PendingIntent.getActivity(applicationContext, alarmData?.id?.toInt()?.hashCode()!!, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, alarmData?.id?.toInt()?.hashCode()!!, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 //        val shopIntent = Intent("android.intent.category.LAUNCHER")
 //        shopIntent.setClassName("com.mashaktifoodfsm.features.dashboard.presentation", "com.mashaktifoodfsm.features.dashboard.presentation.DashboardActivity")
@@ -530,46 +541,46 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                //.setContentIntent(pending)
-                .setFullScreenIntent(pending, true)
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                //.setPriority(NotificationManager.IMPORTANCE_HIGH)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    //.setContentIntent(pending)
+                    .setFullScreenIntent(pending, true)
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    //.setPriority(NotificationManager.IMPORTANCE_HIGH)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                //.setContentIntent(pending)
-                .setFullScreenIntent(pending, true)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .setPriority(NotificationManager.IMPORTANCE_HIGH)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    //.setContentIntent(pending)
+                    .setFullScreenIntent(pending, true)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .setPriority(NotificationManager.IMPORTANCE_HIGH)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
 
 
-        XLog.e("=================Show alarm notification (Notification)=================")
+        Timber.e("=================Show alarm notification (Notification)=================")
 
     }
 
@@ -596,7 +607,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -613,39 +626,39 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setCustomBigContentView(remoteView)
-                .setContent(remoteView)
-                .build()
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setCustomBigContentView(remoteView)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(
-                applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setCustomBigContentView(remoteView)
-                .setContent(remoteView)
-                .build()
+                    applicationContext)
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setCustomBigContentView(remoteView)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -679,7 +692,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         }
 
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, notificationIntent, 0)
+//        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, notificationIntent, 0)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = AppUtils.notificationChannelId
@@ -696,42 +711,42 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                //.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(body)
-                //.setStyle(NotificationCompat.BigTextStyle().bigText(body))
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                //.setContent(remoteView)
-                .setCustomBigContentView(remoteView)
-                .setPriority(NotificationManager.IMPORTANCE_MAX)
-                .build()
+                    //.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(body)
+                    //.setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    //.setContent(remoteView)
+                    .setCustomBigContentView(remoteView)
+                    .setPriority(NotificationManager.IMPORTANCE_MAX)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(applicationContext)
-                //.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(body)
-                //.setStyle(NotificationCompat.BigTextStyle().bigText(body))
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                //.setContent(remoteView)
-                .setCustomBigContentView(remoteView)
-                .setPriority(NotificationManager.IMPORTANCE_MAX)
-                .build()
+                    //.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(body)
+                    //.setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    //.setContent(remoteView)
+                    .setCustomBigContentView(remoteView)
+                    .setPriority(NotificationManager.IMPORTANCE_MAX)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -766,8 +781,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pending: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 //        val shopIntent = Intent("android.intent.category.LAUNCHER")
 //        shopIntent.setClassName("com.mashaktifoodfsm.features.dashboard.presentation", "com.mashaktifoodfsm.features.dashboard.presentation.DashboardActivity")
@@ -792,46 +808,46 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                //.setContentIntent(pending)
-                .setFullScreenIntent(pending, true)
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                //.setPriority(NotificationManager.IMPORTANCE_HIGH)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    //.setContentIntent(pending)
+                    .setFullScreenIntent(pending, true)
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    //.setPriority(NotificationManager.IMPORTANCE_HIGH)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                //.setContentIntent(pending)
-                .setFullScreenIntent(pending, true)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .setPriority(NotificationManager.IMPORTANCE_HIGH)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    //.setContentIntent(pending)
+                    .setFullScreenIntent(pending, true)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .setPriority(NotificationManager.IMPORTANCE_HIGH)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
 
 
-        XLog.e("=================Show clear data notification (Notification)=================")
+        Timber.e("=================Show clear data notification (Notification)=================")
 
     }
 
@@ -858,7 +874,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -875,37 +893,37 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(
-                applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    applicationContext)
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -935,8 +953,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, (chatUserDataModel?.id + "#" + chatListDataModel.id).hashCode(), shopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pending: PendingIntent = PendingIntent.getActivity(applicationContext, (chatUserDataModel?.id + "#" + chatListDataModel.id).hashCode(), shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pending: PendingIntent = PendingIntent.getActivity(applicationContext, (chatUserDataModel?.id + "#" + chatListDataModel.id).hashCode(), shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 //        val shopIntent = Intent("android.intent.category.LAUNCHER")
 //        shopIntent.setClassName("com.mashaktifoodfsm.features.dashboard.presentation", "com.mashaktifoodfsm.features.dashboard.presentation.DashboardActivity")
@@ -961,42 +980,42 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pending)
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .setCustomBigContentView(remoteView)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(headerText + "\n" + bodyText + "\n\n\n"))
-                .setPriority(NotificationManager.IMPORTANCE_HIGH)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pending)
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .setCustomBigContentView(remoteView)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(headerText + "\n" + bodyText + "\n\n\n"))
+                    .setPriority(NotificationManager.IMPORTANCE_HIGH)
+                    .build()
 
             notificationmanager.notify((chatUserDataModel?.id + "#" + chatListDataModel.id).hashCode(), notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(applicationContext)
-                /* .setContentTitle(applicationContext.getString(R.string.app_name))
-                 .setContentText(body)*/
-                .setContentIntent(pending)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setContent(remoteView)
-                .setCustomBigContentView(remoteView)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(headerText + "\n" + bodyText + "\n\n\n"))
-                .setPriority(NotificationManager.IMPORTANCE_HIGH)
-                .build()
+                    /* .setContentTitle(applicationContext.getString(R.string.app_name))
+                     .setContentText(body)*/
+                    .setContentIntent(pending)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setContent(remoteView)
+                    .setCustomBigContentView(remoteView)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(headerText + "\n" + bodyText + "\n\n\n"))
+                    .setPriority(NotificationManager.IMPORTANCE_HIGH)
+                    .build()
 
             notificationmanager.notify((chatUserDataModel?.id + "#" + chatListDataModel.id).hashCode(), notification)
         }
@@ -1044,7 +1063,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1052,7 +1073,7 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
 
             val channelName = AppUtils.notificationChannelName
 
-            XLog.e("========Notification Channel enabled (FirebaseMesagingService)=========")
+            Timber.e("========Notification Channel enabled (FirebaseMesagingService)=========")
 
             val importance = NotificationManager.IMPORTANCE_HIGH
             val notificationChannel = NotificationChannel(channelId, channelName, importance)
@@ -1063,44 +1084,42 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
-        }
-        else {
+        } else {
             val notification = NotificationCompat.Builder(
-                applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    applicationContext)
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
 
     }
-
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -1120,9 +1139,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         }*/
 
         remoteView.setImageViewResource(R.id.imagenotileft_small, R.drawable.ic_logo)
-        remoteView.setTextViewText(R.id.title_small, remoteMessage?.data?.get("body")+
-                "\n From : "+AppUtils.getFormatedDateNew(remoteMessage?.data?.get("leave_from_date"),"yyyy-mm-dd","dd-mm-yyyy")+
-                " To : "+AppUtils.getFormatedDateNew(remoteMessage?.data?.get("leave_to_date"),"yyyy-mm-dd","dd-mm-yyyy"))
+        remoteView.setTextViewText(R.id.title_small, remoteMessage?.data?.get("body") +
+                "\n From : " + AppUtils.getFormatedDateNew(remoteMessage?.data?.get("leave_from_date"), "yyyy-mm-dd", "dd-mm-yyyy") +
+                " To : " + AppUtils.getFormatedDateNew(remoteMessage?.data?.get("leave_to_date"), "yyyy-mm-dd", "dd-mm-yyyy"))
         remoteView.setTextViewText(R.id.text_small, "Nordusk")
 
 
@@ -1137,7 +1156,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1145,7 +1166,7 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
 
             val channelName = AppUtils.notificationChannelName
 
-            XLog.e("========Notification Channel enabled (FirebaseMesagingService)=========")
+            Timber.e("========Notification Channel enabled (FirebaseMesagingService)=========")
 
             val importance = NotificationManager.IMPORTANCE_HIGH
             val notificationChannel = NotificationChannel(channelId, channelName, importance)
@@ -1156,44 +1177,42 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
-        }
-        else {
+        } else {
             val notification = NotificationCompat.Builder(
-                applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    applicationContext)
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
 
     }
-
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -1218,14 +1237,16 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = AppUtils.notificationChannelId
 
             val channelName = AppUtils.notificationChannelName
 
-            XLog.e("========Notification Channel enabled (FirebaseMesagingService)=========")
+            Timber.e("========Notification Channel enabled (FirebaseMesagingService)=========")
 
             val importance = NotificationManager.IMPORTANCE_HIGH
             val notificationChannel = NotificationChannel(channelId, channelName, importance)
@@ -1234,31 +1255,30 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setChannelId(channelId)
-                .setContentIntent(pendingIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notificationBuilder)
-        }
-        else {
+        } else {
             val notification = NotificationCompat.Builder(
-                applicationContext)
-                .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_notifications_icon)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
-                .setGroupSummary(true)
-                .setContent(remoteView)
-                .build()
+                    applicationContext)
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setContent(remoteView)
+                    .build()
 
             notificationmanager.notify(m, notification)
         }
@@ -1288,7 +1308,9 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
         shopIntent.action = Intent.ACTION_MAIN
         shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        //val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        // FLAG_IMMUTABLE update
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, shopIntent, PendingIntent.FLAG_IMMUTABLE)
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1305,37 +1327,249 @@ class NotificationUtils(headerText: String, bodyText: String, shopId: String, lo
             notificationmanager.createNotificationChannel(notificationChannel)
 
             val notificationBuilder = NotificationCompat.Builder(applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .setChannelId(channelId)
+                    .setContentIntent(pendingIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setCustomBigContentView(remoteView)
+                    .setContent(remoteView)
+                    .build()
+
+            notificationmanager.notify(m, notificationBuilder)
+        } else {
+            val notification = NotificationCompat.Builder(
+                    applicationContext)
+                    /*.setContentTitle(applicationContext.getString(R.string.app_name))
+                    .setContentText(remoteMessage?.data?.get("body"))*/
+                    .setContentIntent(pendingIntent)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    // .setStyle(new
+                    // NotificationCompat.BigPictureStyle()
+                    // .bigPicture(bmp))
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setCustomBigContentView(remoteView)
+                    .setContent(remoteView)
+                    .build()
+
+            notificationmanager.notify(m, notification)
+        }
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendFCMNotificaitonQuotationapprova(applicationContext: Context, remoteMessage: RemoteMessage?) {
+        val random = Random()
+        val m = random.nextInt(9999 - 1000) + 1000
+
+        val notificationmanager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        //val remoteView = RemoteViews(applicationContext.packageName, R.layout.customnotificationsmall)
+        val remoteView = RemoteViews(applicationContext.packageName, R.layout.customnoti)
+
+        remoteView.setImageViewResource(R.id.imagenotileft_small, R.drawable.ic_logo)
+        remoteView.setTextViewText(R.id.title_small, remoteMessage?.data?.get("body"))
+//        remoteView.setTextViewText(R.id.text_small, "Nordusk")
+
+        val shopIntent = Intent(applicationContext, DashboardActivity::class.java)
+        shopIntent.putExtra("TYPE", "quotation_approval")
+        shopIntent.action = Intent.ACTION_MAIN
+        shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = AppUtils.notificationChannelId
+
+            val channelName = AppUtils.notificationChannelName
+
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val notificationChannel = NotificationChannel(channelId, channelName, importance)
+            notificationChannel.enableLights(true)
+            notificationChannel.enableVibration(true)
+            notificationChannel.lockscreenVisibility = Notification.DEFAULT_ALL
+            notificationChannel.setShowBadge(false)
+            notificationmanager.createNotificationChannel(notificationChannel)
+
+            val notificationBuilder = NotificationCompat.Builder(applicationContext)
                 .setSmallIcon(R.drawable.ic_notifications_icon)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setAutoCancel(true)
                 .setChannelId(channelId)
                 .setContentIntent(pendingIntent)
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                .setGroup("FTS Group")
+                //.setGroup("FTS Group")
                 .setGroupSummary(true)
-                .setCustomBigContentView(remoteView)
                 .setContent(remoteView)
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setOngoing(false)
+                .setFullScreenIntent(pendingIntent,true)
                 .build()
 
             notificationmanager.notify(m, notificationBuilder)
         } else {
             val notification = NotificationCompat.Builder(
                 applicationContext)
-                /*.setContentTitle(applicationContext.getString(R.string.app_name))
-                .setContentText(remoteMessage?.data?.get("body"))*/
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(R.drawable.ic_notifications_icon)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setAutoCancel(true)
-                // .setStyle(new
-                // NotificationCompat.BigPictureStyle()
-                // .bigPicture(bmp))
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                 .setGroup("FTS Group")
                 .setGroupSummary(true)
-                .setCustomBigContentView(remoteView)
+                .setContent(remoteView)
+                .build()
+
+            notificationmanager.notify(m, notification)
+        }
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendFCMNotificaitonQuotationapprova1(applicationContext: Context, remoteMessage: RemoteMessage?) {
+        val random = Random()
+        val m = random.nextInt(9999 - 1000) + 1000
+
+        val notificationmanager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val remoteView = RemoteViews(applicationContext.packageName, R.layout.customnoti)
+        remoteView.setImageViewResource(R.id.imagenotileft_small, R.drawable.ic_logo)
+        remoteView.setTextViewText(R.id.title_small, remoteMessage?.data?.get("body"))
+        remoteView.setTextViewText(R.id.text_small, "Nordusk")
+
+        val shopIntent = Intent(applicationContext, DashboardActivity::class.java)
+        shopIntent.putExtra("TYPE", "quotation_approval")
+        shopIntent.action = Intent.ACTION_MAIN
+        shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+        shopIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        shopIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        var remoteMsg = remoteMessage?.data?.get("body").toString()
+        CustomStatic.QutoNoFromNoti = remoteMsg.substring(remoteMsg.indexOf("(")+1, remoteMsg.indexOf(")"));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = AppUtils.notificationChannelId
+            val channelName = AppUtils.notificationChannelName
+            val importance = NotificationManager.IMPORTANCE_HIGH
+
+            val notificationChannel = NotificationChannel(channelId, channelName, importance)
+            notificationChannel.enableLights(true)
+            notificationChannel.enableVibration(true)
+            notificationChannel.lockscreenVisibility = Notification.DEFAULT_ALL
+            notificationmanager.createNotificationChannel(notificationChannel)
+
+            var notificationBuilder: NotificationCompat.Builder =
+                NotificationCompat.Builder(applicationContext, channelId)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    //.setLargeIcon(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.ic_logo))
+                    //.setContent(remoteView)
+                    .setContentText(remoteMessage?.data?.get("body").toString())
+                    .setChannelId(channelId)
+                    .setAutoCancel(true)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setOngoing(false)
+
+            notificationBuilder.setContentIntent(pendingIntent)
+
+            notificationmanager.notify(m,notificationBuilder.build())
+        }
+            else {
+            val notification = NotificationCompat.Builder(
+                applicationContext)
+                .setContentIntent(pendingIntent)
+                .setSmallIcon(R.drawable.ic_notifications_icon)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                .setGroup("FTS Group")
+                .setGroupSummary(true)
+                .setContent(remoteView)
+                .build()
+
+            notificationmanager.notify(m, notification)
+        }
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendFCMNotificaitonLead(applicationContext: Context, remoteMessage: RemoteMessage?) {
+        val random = Random()
+        val m = random.nextInt(9999 - 1000) + 1000
+
+        val notificationmanager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+         CustomStatic.lead_msgBody = remoteMessage?.data?.get("body")
+        CustomStatic.lead_msgLeadDate = remoteMessage?.data?.get("lead_date")
+        CustomStatic.lead_msgLeadEnquiry = remoteMessage?.data?.get("enquiry_type")
+
+        val remoteView = RemoteViews(applicationContext.packageName, R.layout.customnoti)
+        remoteView.setImageViewResource(R.id.imagenotileft_small, R.drawable.ic_logo)
+        remoteView.setTextViewText(R.id.title_small, remoteMessage?.data?.get("body"))
+        remoteView.setTextViewText(R.id.text_small, "Nordusk")
+
+        val shopIntent = Intent(applicationContext, DashboardActivity::class.java)
+        shopIntent.putExtra("TYPE", "lead_work")
+        shopIntent.action = Intent.ACTION_MAIN
+        shopIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+        shopIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        shopIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 1, shopIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        var remoteMsg = remoteMessage?.data?.get("body").toString()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = AppUtils.notificationChannelId
+            val channelName = AppUtils.notificationChannelName
+            val importance = NotificationManager.IMPORTANCE_HIGH
+
+            val notificationChannel = NotificationChannel(channelId, channelName, importance)
+            notificationChannel.enableLights(true)
+            notificationChannel.enableVibration(true)
+            notificationChannel.lockscreenVisibility = Notification.DEFAULT_ALL
+            notificationmanager.createNotificationChannel(notificationChannel)
+
+            var notificationBuilder: NotificationCompat.Builder =
+                NotificationCompat.Builder(applicationContext, channelId)
+                    .setSmallIcon(R.drawable.ic_notifications_icon)
+                    //.setLargeIcon(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.ic_logo))
+                    //.setContent(remoteView)
+                    .setContentText(remoteMessage?.data?.get("body").toString())
+                    .setChannelId(channelId)
+                    .setAutoCancel(true)
+                    .setDefaults(Notification.DEFAULT_ALL)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    .setGroup("FTS Group")
+                    .setGroupSummary(true)
+                    .setOngoing(false)
+
+            notificationBuilder.setContentIntent(pendingIntent)
+
+            notificationmanager.notify(m,notificationBuilder.build())
+        }
+        else {
+            val notification = NotificationCompat.Builder(
+                applicationContext)
+                .setContentIntent(pendingIntent)
+                .setSmallIcon(R.drawable.ic_notifications_icon)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                .setGroup("FTS Group")
+                .setGroupSummary(true)
                 .setContent(remoteView)
                 .build()
 
